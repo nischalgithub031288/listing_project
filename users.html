@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>CRUD OF USERS</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script src="../js/react.development.js"></script>
+  <script src="../js/react-dom.development.js"></script>
+  <script src="../js/babel.js"></script>
+  <script src="../js/redux.js"></script>
+  <script src="../js/faker.min.js"></script>
+  <script src="../js/uuid.min.js"></script>
+  <script src="../js/reactstrap.full.js"></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous" />
+
+  <script type="text/babel">
+      const rootHandle = document.getElementById("root");
+      const {
+        Table,
+        Button,
+        Alert,
+        Modal,
+        ModalHeader,
+        ModalFooter,
+        ModalBody,
+        Form,
+        FormGroup,
+        FormText,
+        Label,
+        Input,
+        Col
+      } = Reactstrap;
+
+      //generate fake user data
+
+      function generateData() {
+        const users = [];
+        for (let i = 0; i < 5; i++) {
+          const name = faker.name.firstName();
+          const email = faker.internet.email(name.toLowerCase());
+          const user = {
+            id: uuid(),
+            name,
+            email
+          };
+
+          users.push(user);
+          
+        }
+        return users;
+        // console.log(users)
+      }
+
+      class App extends React.Component {
+        constructor() {
+          super();
+          this.state = {
+            users: [],
+            filterUsers: []
+          };
+        }
+        componentDidMount() {
+          this.setState(() => ({
+            users: generateData(),
+            filterUsers: generateData()
+            
+          }));
+          
+        }
+
+        removeHandle = id => {
+          this.setState(prevState => ({
+            users: prevState.users.filter(user => user.id != id),
+            filterUsers: prevState.filterUsers.filter(user => user.id != id)
+          }));
+
+          console.log("remove", id);
+        };
+
+        editHandle = output => {
+          console.log("output", output);
+
+          const users = this.state.filterUsers;
+          const updatedData = users.map(user => {
+            if (user.id == output.id) {
+              return {
+                ...users,
+                ...output
+              };
+            } else {
+              return user;
+            }
+          });
+          console.log(updatedData);
+          this.setState(prevState => ({ filterUsers: updatedData }));
+        };
+
+        userHandle = user => {
+          //console.log(user)
+          this.setState(prevState => ({
+            users: [...prevState.users, user],
+            filterUsers: [...prevState.users, user]
+
+            //users : prevState.users.concat(user)
+          }));
+        };
+        filterUsers = e => {
+          let key = e.target.value;
+          //console.log(key)
+          let user = this.state.users;
+          let filterUsers = this.filterValue1(user, key);
+          this.setState(() => ({ filterUsers }));
+        };
+        filterValue1 = (user, key) => {
+          return user.filter(
+            item => item.name.toLowerCase().indexOf(key.toLowerCase()) > -1
+          );
+        };
+
+        render() {
+          return (
+            <div className="container">
+              <div className="row">
+                <div className="col-md-8">
+                  <input
+                    type="text"
+                    Placeholder="search by name"
+                    onChange={this.filterUsers}
+                  />
+                  <h2>Listing Users - {this.state.filterUsers.length}</h2>
+                  <UserTable
+                    users={this.state.filterUsers}
+                    removeHandle={this.removeHandle}
+                    editHandle={this.editHandle}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <AddUser userHandle={this.userHandle} />
+                </div>
+              </div>
+            </div>
+          );
+        }
+      }
+
+      class AddUser extends React.Component {
+        constructor() {
+          super();
+          this.state = {
+            name: "",
+            email: "",
+            nameError: "",
+            emailError: ""
+            //isSaved : false
+          };
+        }
+
+        nameHandle = e => {
+          const name = e.target.value;
+          this.setState(() => ({ name }));
+        };
+
+        emailHandle = e => {
+          const email = e.target.value;
+          this.setState(() => ({ email }));
+        };
+
+        validate = () => {
+          let isError = false;
+          const errors = {
+            nameError: "",
+            emailError: ""
+          };
+          if (this.state.name.length < 4) {
+            (isError = true),
+              (errors.nameError = "*** Name should at least 4 character long");
+          }
+          if (this.state.email.indexOf("@") === -1) {
+            (isError = true), (errors.emailError = "*** Require valid Email");
+          }
+          this.setState({
+            ...this.state,
+            ...errors
+          });
+          return isError;
+        };
+
+        handleSubmit = e => {
+          e.preventDefault();
+          const err = this.validate();
+          console.log("err", err);
+          if (!err) {
+            const formData = {
+              id: uuid(),
+              name: this.state.name,
+              email: this.state.email
+            };
+            console.log(formData);
+
+            this.props.userHandle(formData);
+
+            this.setState(() => ({
+              name: "",
+              email: ""
+            }));
+          }
+        };
+        render() {
+          return (
+            <div>
+              <h2>Add Users</h2>
+
+              <Form onSubmit={this.handleSubmit}>
+                <label>
+                  {" "}
+                  name :
+                  <input
+                    type="text"
+                    value={this.state.name}
+                    onChange={this.nameHandle}
+                  />
+                </label>
+                <FormText color="muted">{this.state.nameError}</FormText>
+                <label>
+                  email:
+                  <input
+                    type="text"
+                    value={this.state.email}
+                    onChange={this.emailHandle}
+                  />
+                </label>
+                <FormText color="muted">{this.state.emailError}</FormText>
+                <br />
+                <Button>Submit</Button>
+              </Form>
+            </div>
+          );
+        }
+      }
+
+      function UserTable(props) {
+        console.log("UTableProps", props);
+
+        return (
+          <Table striped bordered>
+            <thead>
+              <tr>
+                <td>#</td>
+                <td>Name</td>
+                <td>Email</td>
+                <td>Delete</td>
+                <td>Edit</td>
+              </tr>
+            </thead>
+            <tbody>
+              {props.users.map((user, index) => {
+                return (
+                  <TableRow
+                    index={index}
+                    //  name={user.name}
+                    //  email={user.email}
+                    {...user}
+                    key={index}
+                    removeHandle={props.removeHandle}
+                    editHandle={props.editHandle}
+                  />
+                );
+              })}
+            </tbody>
+          </Table>
+        );
+      }
+      function TableRow(props) {
+        // console.log('output1',props)
+        const { index, name, email, id } = props;
+        return (
+          <tr>
+            <td>{index + 1}</td>
+            <td>{name}</td>
+            <td>{email}</td>
+            <td>
+              <Button
+                outline
+                color="danger"
+                size="sm"
+                onClick={() => {
+                  const confirmDelete = confirm("Are you sure ?");
+                  if (confirmDelete) {
+                    props.removeHandle(id);
+                  }
+                }}
+              >
+                remove
+              </Button>
+            </td>
+            <td>
+              <ModalExample user={props} editHandle={props.editHandle} />
+            </td>
+          </tr>
+        );
+      }
+
+      class ModalExample extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = {
+            modal: false,
+            name: this.props.user.name,
+            email: this.props.user.email
+          };
+
+          this.toggle = this.toggle.bind(this);
+        }
+
+        toggle() {
+          this.setState(prevState => ({
+            modal: !prevState.modal
+          }));
+        }
+
+        handleChange = e => {
+          e.persist();
+          this.setState(() => ({ [e.target.name]: e.target.value }));
+        };
+
+        handleSubmit = e => {
+          e.preventDefault();
+          const id = this.props.user.id;
+          const user = {
+            id,
+            name: this.state.name,
+            email: this.state.email
+          };
+          //   console.log(user)
+          this.props.editHandle(user);
+          this.toggle();
+        };
+
+        render() {
+          return (
+            <div>
+              <Button outline color="success" size="sm" onClick={this.toggle}>
+                edit
+              </Button>
+              <Modal
+                isOpen={this.state.modal}
+                toggle={this.toggle}
+                className={this.props.className}
+              >
+                <ModalHeader toggle={this.toggle}>Edit</ModalHeader>
+                <ModalBody>
+                  <Form>
+                    <FormGroup row>
+                      <Label>Name</Label>
+                      <Input
+                        type="text"
+                        value={this.state.name}
+                        onChange={this.handleChange}
+                        name="name"
+                      />
+                    </FormGroup>
+                    <FormGroup row>
+                      <Label>Email</Label>
+                      <Input
+                        type="text"
+                        value={this.state.email}
+                        onChange={this.handleChange}
+                        name="email"
+                      />
+                    </FormGroup>
+
+                    <FormGroup>
+                      <Button
+                        onClick={this.handleSubmit}
+                        color="primary"
+                        size="sm"
+                        block
+                      >
+                        Submit
+                      </Button>
+                    </FormGroup>
+                  </Form>
+                </ModalBody>
+              </Modal>
+            </div>
+          );
+        }
+      }
+
+      ReactDOM.render(<App />, rootHandle);
+    </script>
+</body>
+
+</html>
